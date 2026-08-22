@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Annual Statement{% endblock %}
+{% block page_title %}Annual Giving Statement{% endblock %}
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div><h4>📄 Annual Giving Statement</h4><p>Summary of your contributions for tax and personal records.</p></div>
+  <button onclick="window.print()" class="btn btn-navy"><i class="bi bi-printer me-2"></i>Print</button>
+</div>
+<div class="fcard mb-4">
+  <form method="GET" class="row g-2 align-items-end">
+    <div class="col-md-3"><label class="form-label">Financial Year</label>
+      <select name="fy" class="form-select" onchange="this.form.submit()">
+        {% for y in fy_list %}<option value="{{ y }}" {% if y==selected_fy %}selected{% endif %}>{{ y }}</option>{% endfor %}
+      </select></div>
+  </form>
+</div>
+<div class="row justify-content-center" id="printArea">
+  <div class="col-lg-8">
+    <div class="fcard" style="border:1px solid #ccc;">
+      <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #1a2e5a;">
+        <div style="font-size:36px;color:#1a2e5a;">✝</div>
+        <h4 style="font-family:'Playfair Display',serif;color:#1a2e5a;margin:4px 0;">All Saints' Cathedral, Nagpur</h4>
+        <p style="font-size:13px;color:#64748b;margin:2px 0;font-style:italic;">Diocese of Nagpur (C.N.I.)</p>
+        <h5 style="margin:12px 0 4px;font-weight:700;">ANNUAL GIVING STATEMENT</h5>
+        <p style="font-size:13px;margin:0;">Financial Year: <strong>{{ selected_fy }}</strong></p>
+      </div>
+      <div class="row mb-4">
+        <div class="col-6">
+          <div style="font-size:13px;"><strong>Donor Name:</strong> {{ current_user.full_name }}</div>
+          <div style="font-size:13px;"><strong>Mobile:</strong> {{ current_user.mobile }}</div>
+          <div style="font-size:13px;"><strong>Email:</strong> {{ current_user.email or '—' }}</div>
+        </div>
+        <div class="col-6 text-end">
+          <div style="font-size:13px;"><strong>Statement Date:</strong> {{ now.strftime('%d %B %Y') if now else 'Today' }}</div>
+          <div style="font-size:13px;"><strong>Total Receipts:</strong> {{ donations|length }}</div>
+        </div>
+      </div>
+      <!-- Head-wise summary -->
+      <h6 class="fw-bold mb-2">Summary by Donation Head</h6>
+      <table class="r-table mb-4">
+        <thead><tr><th style="text-align:left;padding-left:8px;">Donation Head</th><th>Amount (₹)</th></tr></thead>
+        <tbody>
+          {% for head, amt in head_totals.items() %}
+          <tr><td style="padding-left:8px;">{{ head }}</td><td style="text-align:right;font-weight:600;">{{ "{:,.2f}".format(amt) }}</td></tr>
+          {% endfor %}
+        </tbody>
+        <tfoot><tr style="font-weight:700;background:#f0f4f8;"><td style="padding-left:8px;">GRAND TOTAL</td><td style="text-align:right;">{{ "{:,.2f}".format(total) }}</td></tr></tfoot>
+      </table>
+      <!-- Receipt list -->
+      <h6 class="fw-bold mb-2">Receipt-wise Details</h6>
+      <table class="r-table mb-4">
+        <thead><tr><th>Receipt No</th><th>Date</th><th>Mode</th><th>Amount (₹)</th></tr></thead>
+        <tbody>
+          {% for d in donations %}
+          <tr><td>{{ d.receipt_number }}</td><td>{{ d.donation_date.strftime('%d %b %Y') }}</td>
+            <td>{{ d.payment_mode.value }}</td><td style="text-align:right;font-weight:600;">{{ "{:,.2f}".format(d.total_amount) }}</td></tr>
+          {% else %}<tr><td colspan="4" style="text-align:center;color:#64748b;">No donations for this year</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      <div style="margin-top:24px;text-align:center;font-size:12px;color:#64748b;border-top:1px solid #ccc;padding-top:12px;">
+        <p>This statement is computer-generated and valid for all purposes.</p>
+        <p style="font-weight:700;">All Saints' Cathedral, Nagpur &nbsp;|&nbsp; Diocese of Nagpur (C.N.I.)</p>
+        <p>{{ current_user.mobile }} &nbsp;|&nbsp; {{ current_user.email or 'office@allsaintsnagpur.org' }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>const now=new Date();</script>
+<style>@media print{ #sidebar,#topbar,.ph,.fcard:first-of-type,form{display:none!important;}#main{margin:0!important;padding:8px!important;}}</style>
+{% endblock %}

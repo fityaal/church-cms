@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% block title %}Reports – ASC CMS{% endblock %}
+{% block page_title %}Reports & Analytics{% endblock %}
+{% block content %}
+<div class="ph"><h4>📊 Reports & Analytics</h4><p>Financial reports for All Saints' Cathedral, Nagpur.</p></div>
+
+<!-- Report Type Tabs -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+  {% for rt, label, icon in [('summary','Financial Summary','pie-chart'),('monthly','Monthly Trend','graph-up'),('donors','Top Donors','people'),('headwise','Head-wise Detail','list-columns')] %}
+  <a href="?type={{ rt }}&fy={{ selected_fy }}&start_date={{ start_date }}&end_date={{ end_date }}" class="btn {% if rtype==rt %}btn-navy{% else %}btn-outline-secondary{% endif %}">
+    <i class="bi bi-{{ icon }} me-2"></i>{{ label }}
+  </a>
+  {% endfor %}
+  <!-- FY selector -->
+  <form method="GET" class="ms-auto d-flex gap-2 align-items-center">
+    <input type="hidden" name="type" value="{{ rtype }}"/>
+    <input type="hidden" name="start_date" value="{{ start_date }}"/>
+    <input type="hidden" name="end_date" value="{{ end_date }}"/>
+    <select name="fy" class="form-select form-select-sm" style="width:130px;" onchange="this.form.submit()">
+      {% for y in financial_years %}<option value="{{ y }}" {% if y==selected_fy %}selected{% endif %}>{{ y }}</option>{% endfor %}
+    </select>
+    <button type="button" onclick="window.print()" class="btn btn-sm btn-navy"><i class="bi bi-printer me-2"></i>Print Report</button>
+  </form>
+</div>
+
+<div class="fcard mb-3">
+  <form method="GET" class="row g-2 align-items-end">
+    <input type="hidden" name="type" value="{{ rtype }}"/>
+    <input type="hidden" name="fy" value="{{ selected_fy }}"/>
+    {% if rtype == 'headwise' and data.for_head %}
+    <input type="hidden" name="head_filter" value="{{ data.for_head }}"/>
+    {% endif %}
+    <div class="col-md-3">
+      <label class="form-label">From Date</label>
+      <input type="date" name="start_date" class="form-control" value="{{ start_date }}"/>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">To Date</label>
+      <input type="date" name="end_date" class="form-control" value="{{ end_date }}"/>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+      <button type="submit" class="btn btn-navy">Apply</button>
+      <a href="?type={{ rtype }}&fy={{ selected_fy }}" class="btn btn-outline-secondary"><i class="bi bi-x"></i></a>
+    </div>
+  </form>
+</div>
+{% if start_date or end_date %}
+<div class="mb-3">
+  <span class="badge bg-light text-dark border">
+    <i class="bi bi-funnel me-1"></i>Active Filters: Date {{ start_date or 'Any' }} to {{ end_date or 'Any' }}
+  </span>
+</div>
+{% endif %}
+
+{% if rtype == 'summary' %}
+<!-- ── Financial Summary ── -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="kcard text-center">
+      <div class="kval text-success">₹{{ "{:,.2f}".format(data.total_in) }}</div>
+      <div class="klbl">Total Income ({{ selected_fy }})</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="kcard text-center">
+      <div class="kval text-danger">₹{{ "{:,.2f}".format(data.total_out) }}</div>
+      <div class="klbl">Total Expenditure ({{ selected_fy }})</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="kcard text-center">
+      <div class="kval" style="color:{% if data.net>=0 %}#166534{% else %}#991b1b{% endif %};">₹{{ "{:,.2f}".format(data.net|abs) }}</div>
+      <div class="klbl">Net {{ 'Surplus' if data.net>=0 else 'Deficit' }} ({{ selected_fy }})</div>
+    </div>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="tcard">
+      <div class="tcard-hdr"><h6><i class="bi bi-arrow-down-circle-fill text-success me-2"></i>Income by Head</h6></div>
+      <table class="table mb-0">
+        <thead><tr><th>#</th><th>Donation Head</th><th class="text-end">Amount</th><th class="text-end">Receipts</th></tr></thead>
+        <tbody>
+          {% for row in data.head_totals %}
+          <tr>
+            <td style="color:#64748b;">{{ loop.index }}</td>
+            <td><a href="?type=headwise&fy={{ selected_fy }}&head_filter={{ row.head_name }}&start_date={{ start_date }}&end_date={{ end_date }}" class="text-decoration-none text-dark">{{ row.head_label }}</a></td>
+            <td class="text-end fw-bold text-success">₹{{ "{:,.2f}".format(row.total) }}</td>
+            <td class="text-end" style="color:#64748b;">{{ row.cnt }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot><tr style="font-weight:700;background:#f8fafc;"><td colspan="2">TOTAL</td><td class="text-end">₹{{ "{:,.2f}".format(data.total_in) }}</td><td></td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="tcard">
+      <div class="tcard-hdr"><h6><i class="bi bi-arrow-up-circle-fill text-danger me-2"></i>Expenditure by Category</h6></div>
+      <table class="table mb-0">
+        <thead><tr><th>#</th><th>Category</th><th class="text-end">Amount</th><th class="text-end">%</th></tr></thead>
+        <tbody>
+          {% for row in data.exp_totals %}
+          <tr>
+            <td style="color:#64748b;">{{ loop.index }}</td>
+            <td>{{ row.category }}</td>
+            <td class="text-end fw-bold">₹{{ "{:,.2f}".format(row.total) }}</td>
+            <td class="text-end" style="color:#64748b;">{{ "{:.1f}%".format(row.total/data.total_out*100) if data.total_out else '0%' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot><tr style="font-weight:700;background:#f8fafc;"><td colspan="2">TOTAL</td><td class="text-end">₹{{ "{:,.2f}".format(data.total_out) }}</td><td></td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+<div class="row g-3 mt-1">
+  <div class="col-lg-6"><div class="chart-card"><h6>Income Distribution</h6><canvas id="incPie"></canvas></div></div>
+  <div class="col-lg-6"><div class="chart-card"><h6>Expense Distribution</h6><canvas id="expPie"></canvas></div></div>
+</div>
+
+{% elif rtype == 'monthly' %}
+<!-- ── Monthly Trend ── -->
+<div class="chart-card mb-4"><h6>Monthly Income vs Expenditure ({{ selected_fy }})</h6><canvas id="monthlyBar" height="80"></canvas></div>
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="tcard"><div class="tcard-hdr"><h6>Monthly Income</h6></div>
+      <table class="table mb-0"><thead><tr><th>Month</th><th class="text-end">Amount</th></tr></thead>
+        <tbody>{% set months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
+        {% for r in data.mo_inc %}<tr><td>{{ months[r.m|int-1] }}</td><td class="text-end fw-bold">₹{{ "{:,.2f}".format(r.total) }}</td></tr>{% else %}<tr><td colspan="2" class="text-center text-muted">No data</td></tr>{% endfor %}
+        </tbody></table></div>
+  </div>
+  <div class="col-md-6">
+    <div class="tcard"><div class="tcard-hdr"><h6>Monthly Expenditure</h6></div>
+      <table class="table mb-0"><thead><tr><th>Month</th><th class="text-end">Amount</th></tr></thead>
+        <tbody>
+        {% for r in data.mo_exp %}<tr><td>{{ months[r.m|int-1] }}</td><td class="text-end fw-bold text-danger">₹{{ "{:,.2f}".format(r.total) }}</td></tr>{% else %}<tr><td colspan="2" class="text-center text-muted">No data</td></tr>{% endfor %}
+        </tbody></table></div>
+  </div>
+</div>
+
+{% elif rtype == 'donors' %}
+<!-- ── Top Donors ── -->
+<div class="tcard">
+  <div class="tcard-hdr"><h6><i class="bi bi-trophy me-2"></i>Top Donors – {{ selected_fy }}</h6></div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead><tr><th>Rank</th><th>Donor Name</th><th>Mobile</th><th class="text-end">Total Donated</th><th class="text-end">Receipts</th></tr></thead>
+      <tbody>
+        {% for row in data.top_donors %}
+        <tr>
+          <td>
+            {% if loop.index == 1 %}<span style="color:#f59e0b;font-size:16px;">🥇</span>
+            {% elif loop.index == 2 %}<span style="font-size:16px;">🥈</span>
+            {% elif loop.index == 3 %}<span style="font-size:16px;">🥉</span>
+            {% else %}{{ loop.index }}{% endif %}
+          </td>
+          <td class="fw-bold">{{ row.full_name }}</td>
+          <td style="color:#64748b;">{{ row.mobile }}</td>
+          <td class="text-end fw-bold text-success">₹{{ "{:,.2f}".format(row.total) }}</td>
+          <td class="text-end">{{ row.cnt }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-4">No donation data.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% elif rtype == 'headwise' %}
+<!-- ── Head-wise Detail ── -->
+<div class="fcard mb-3">
+  <form method="GET" class="row g-2 align-items-end">
+    <input type="hidden" name="type" value="headwise"/>
+    <input type="hidden" name="fy" value="{{ selected_fy }}"/>
+    <input type="hidden" name="start_date" value="{{ start_date }}"/>
+    <input type="hidden" name="end_date" value="{{ end_date }}"/>
+    <div class="col-md-4">
+      <label class="form-label">Filter by Donation Head</label>
+      <select name="head_filter" class="form-select">
+        <option value="">All Heads</option>
+        {% for h in data.heads %}<option value="{{ h.name }}" {% if h.name==data.for_head %}selected{% endif %}>{{ h.value }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2"><button type="submit" class="btn btn-navy">Apply</button></div>
+  </form>
+</div>
+<div class="tcard">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead><tr><th>Donor Name</th><th>Mobile</th><th>Donation Head</th><th class="text-end">Amount</th></tr></thead>
+      <tbody>
+        {% for row in data.rows %}
+        <tr><td class="fw-bold">{{ row.full_name }}</td><td style="color:#64748b;">{{ row.mobile }}</td>
+          <td><span class="badge bg-light text-dark border" style="font-size:11px;">{{ row.head_label }}</span></td>
+          <td class="text-end fw-bold">₹{{ "{:,.2f}".format(row.total) }}</td>
+        </tr>
+        {% else %}<tr><td colspan="4" class="text-center text-muted py-4">No data.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<style>
+@media print {
+  #sidebar, #topbar, .ph, .d-flex.gap-2.mb-4.flex-wrap, .fcard.mb-3, .ms-auto.d-flex.gap-2.align-items-center {
+    display: none !important;
+  }
+  #main { margin: 0 !important; padding: 0 !important; }
+  .tcard, .chart-card, .kcard { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+  body { background: white !important; }
+}
+</style>
+{% if rtype == 'summary' %}
+<script>
+const pal=['#1a2e5a','#c8960c','#2563eb','#dc2626','#16a34a','#9333ea','#ea580c','#0891b2','#be185d','#65a30d','#64748b'];
+new Chart(document.getElementById('incPie'),{type:'doughnut',data:{labels:{{ data.head_totals|map(attribute='head_label')|list|tojson }},datasets:[{data:{{ data.head_totals|map(attribute='total')|list|tojson }},backgroundColor:pal}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
+new Chart(document.getElementById('expPie'),{type:'doughnut',data:{labels:{{ data.exp_totals|map(attribute='category')|list|tojson }},datasets:[{data:{{ data.exp_totals|map(attribute='total')|list|tojson }},backgroundColor:pal}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
+</script>
+{% elif rtype == 'monthly' %}
+<script>
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const iD=Array(12).fill(0),eD=Array(12).fill(0);
+{{ data.mo_inc|tojson }}.forEach(r=>{iD[parseInt(r.m)-1]=parseFloat(r.total||0);});
+{{ data.mo_exp|tojson }}.forEach(r=>{eD[parseInt(r.m)-1]=parseFloat(r.total||0);});
+new Chart(document.getElementById('monthlyBar'),{type:'bar',data:{labels:MN,datasets:[{label:'Income',data:iD,backgroundColor:'rgba(22,163,74,.75)',borderRadius:5},{label:'Expense',data:eD,backgroundColor:'rgba(220,38,38,.75)',borderRadius:5}]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true,ticks:{callback:v=>'₹'+v.toLocaleString('en-IN')}}}}});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}{{ donor.full_name }} – ASC CMS{% endblock %}
+{% block page_title %}Member Profile{% endblock %}
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div><h4>👤 {{ donor.full_name }}</h4><p>Member profile & donation history</p></div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('admin.edit_donor', uid=donor.id) }}" class="btn btn-outline-secondary"><i class="bi bi-pencil me-1"></i>Edit</a>
+    <a href="{{ url_for('admin.new_donation') }}" class="btn btn-navy"><i class="bi bi-plus me-1"></i>New Receipt</a>
+    <a href="{{ url_for('admin.donors') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="fcard">
+      <div style="text-align:center;padding:16px 0;">
+        <div style="width:72px;height:72px;border-radius:50%;background:#1a2e5a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;margin:0 auto 12px;">{{ donor.full_name[0]|upper }}</div>
+        <h5 class="mb-1">{{ donor.full_name }}</h5>
+        <span class="bs-{{ 'confirmed' if donor.is_active else 'cancelled' }}">{{ 'Active' if donor.is_active else 'Inactive' }}</span>
+      </div>
+      <hr/>
+      <div style="font-size:13px;" class="row g-2">
+        <div class="col-12"><i class="bi bi-phone me-2 text-muted"></i>{{ donor.mobile }}</div>
+        <div class="col-12"><i class="bi bi-envelope me-2 text-muted"></i>{{ donor.email or 'Not provided' }}</div>
+        <div class="col-12"><i class="bi bi-geo-alt me-2 text-muted"></i>{{ donor.address or 'Not provided' }}</div>
+        <div class="col-12"><i class="bi bi-calendar me-2 text-muted"></i>Member since {{ donor.created_at.strftime('%B %Y') }}</div>
+        <div class="col-12"><i class="bi bi-clock me-2 text-muted"></i>Last login: {{ donor.last_login.strftime('%d %b %Y') if donor.last_login else 'Never' }}</div>
+      </div>
+      {% if current_user.is_admin %}
+      <hr/>
+      <form method="POST" action="{{ url_for('admin.reset_donor_password', uid=donor.id) }}">
+        <button type="submit" class="btn btn-outline-warning btn-sm w-100" onclick="return confirm('Reset password to default?')"><i class="bi bi-key me-1"></i>Reset Password</button>
+      </form>
+      {% endif %}
+    </div>
+    <div class="fcard mt-3">
+      <h6 class="fw-bold mb-3" style="color:var(--navy);">Giving Summary</h6>
+      <div style="font-size:13px;" class="row g-2">
+        <div class="col-12 d-flex justify-content-between"><span class="text-muted">Total Donated:</span><strong>₹{{ "{:,.2f}".format(total) }}</strong></div>
+        <div class="col-12 d-flex justify-content-between"><span class="text-muted">Total Receipts:</span><strong>{{ donations|length }}</strong></div>
+        {% for fy, amt in fy_totals.items() %}
+        <div class="col-12 d-flex justify-content-between"><span class="text-muted">{{ fy }}:</span><span>₹{{ "{:,.2f}".format(amt) }}</span></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-8">
+    <div class="tcard mb-3">
+      <div class="tcard-hdr"><h6>Head-wise Giving</h6></div>
+      <div class="table-responsive"><table class="table mb-0">
+        <thead><tr><th>Donation Head</th><th class="text-end">Amount</th></tr></thead>
+        <tbody>{% for head, amt in head_totals.items() %}<tr><td>{{ head }}</td><td class="text-end fw-bold">₹{{ "{:,.2f}".format(amt) }}</td></tr>{% else %}<tr><td colspan="2" class="text-center text-muted">No donations yet</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </div>
+    <div class="tcard">
+      <div class="tcard-hdr"><h6>Donation History</h6></div>
+      <div class="table-responsive"><table class="table mb-0">
+        <thead><tr><th>Receipt No</th><th>Date</th><th>Amount</th><th>Mode</th><th>F.Y.</th><th></th></tr></thead>
+        <tbody>
+          {% for d in donations %}
+          <tr>
+            <td><code style="font-size:12px;">{{ d.receipt_number }}</code></td>
+            <td>{{ d.donation_date.strftime('%d %b %Y') }}</td>
+            <td class="fw-bold">₹{{ "{:,.2f}".format(d.total_amount) }}</td>
+            <td><span class="badge bg-light text-dark border" style="font-size:11px;">{{ d.payment_mode.value }}</span></td>
+            <td style="color:#64748b;font-size:12px;">{{ d.financial_year }}</td>
+            <td><a href="{{ url_for('admin.download_receipt', did=d.id) }}" class="btn btn-sm btn-outline-success py-0 px-2"><i class="bi bi-file-pdf"></i></a></td>
+          </tr>
+          {% else %}<tr><td colspan="6" class="text-center text-muted py-3">No confirmed donations</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

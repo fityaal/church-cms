@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}My Dashboard – ASC CMS{% endblock %}
+{% block page_title %}My Dashboard{% endblock %}
+{% block content %}
+<div class="ph">
+  <h4>🙏 Welcome, {{ current_user.full_name }}!</h4>
+  <p>Your giving dashboard for All Saints' Cathedral, Nagpur &nbsp;|&nbsp; Financial Year: <strong>{{ fy }}</strong></p>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="kcard">
+      <div class="icon-box" style="background:#dcfce7;color:#166534;"><i class="bi bi-heart-fill"></i></div>
+      <div class="kval">₹{{ "{:,.0f}".format(total_year) }}</div>
+      <div class="klbl">My Giving This Year ({{ fy }})</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="kcard">
+      <div class="icon-box" style="background:#dbeafe;color:#1d4ed8;"><i class="bi bi-gift-fill"></i></div>
+      <div class="kval">₹{{ "{:,.0f}".format(total_life) }}</div>
+      <div class="klbl">Total Lifetime Giving</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="kcard">
+      <div class="icon-box" style="background:#ede9fe;color:#6d28d9;"><i class="bi bi-receipt"></i></div>
+      <div class="kval">{{ my_donations|length }}</div>
+      <div class="klbl">Receipts (Recent)</div>
+      <div class="kchg"><a href="{{ url_for('donor.my_donations') }}" class="text-decoration-none" style="font-size:12px;">View all →</a></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="chart-card mb-3">
+      <h6><i class="bi bi-bar-chart me-2"></i>My Giving by Head ({{ fy }})</h6>
+      {% if head_data %}
+      <canvas id="myHeadChart" height="120"></canvas>
+      {% else %}
+      <p class="text-muted text-center py-3" style="font-size:13px;">No giving recorded for {{ fy }} yet. <a href="{{ url_for('donor.donate') }}">Give now →</a></p>
+      {% endif %}
+    </div>
+    <div class="tcard">
+      <div class="tcard-hdr"><h6><i class="bi bi-clock-history me-2"></i>Recent Receipts</h6>
+        <a href="{{ url_for('donor.my_donations') }}" class="btn btn-sm btn-navy">View All</a></div>
+      <div class="table-responsive"><table class="table mb-0">
+        <thead><tr><th>Receipt No</th><th>Date</th><th>Amount</th><th></th></tr></thead>
+        <tbody>
+          {% for d in my_donations %}
+          <tr>
+            <td><code style="font-size:12px;">{{ d.receipt_number }}</code></td>
+            <td>{{ d.donation_date.strftime('%d %b %Y') }}</td>
+            <td class="fw-bold">₹{{ "{:,.2f}".format(d.total_amount) }}</td>
+            <td><a href="{{ url_for('donor.download_receipt', did=d.id) }}" class="btn btn-sm btn-outline-success py-0 px-2" title="Download PDF"><i class="bi bi-file-pdf"></i></a></td>
+          </tr>
+          {% else %}<tr><td colspan="4" class="text-center text-muted py-3">No donations yet. <a href="{{ url_for('donor.donate') }}">Give online</a></td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <!-- Quick Give CTA -->
+    <div class="fcard mb-3 text-center" style="background:linear-gradient(135deg,#1a2e5a,#2563eb);color:#fff;">
+      <div style="font-size:36px;margin-bottom:8px;">🙏</div>
+      <h5 class="mb-2">Give Online</h5>
+      <p style="font-size:13px;opacity:.85;margin-bottom:16px;">Make a secure donation from anywhere, anytime.</p>
+      <a href="{{ url_for('donor.donate') }}" class="btn btn-gold w-100" style="font-size:15px;font-weight:700;padding:10px;">
+        <i class="bi bi-heart me-2"></i>Donate Now
+      </a>
+    </div>
+    <!-- Announcements -->
+    {% if announcements %}
+    <div class="tcard mb-3">
+      <div class="tcard-hdr"><h6><i class="bi bi-megaphone me-2"></i>Announcements</h6></div>
+      <div class="p-3">
+        {% for ann in announcements %}
+        <div class="mb-2 pb-2 border-bottom">
+          <div style="font-size:13px;font-weight:600;">{{ ann.title }}</div>
+          <div style="font-size:12px;color:#64748b;margin-top:2px;">{{ ann.content[:80] }}{% if ann.content|length>80 %}...{% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    <!-- Upcoming Events -->
+    {% if events %}
+    <div class="tcard">
+      <div class="tcard-hdr"><h6><i class="bi bi-calendar-event me-2"></i>Upcoming Events</h6>
+        <a href="{{ url_for('donor.events') }}" class="btn btn-sm btn-navy">All Events</a></div>
+      <div class="p-3">
+        {% for ev in events %}
+        <div class="mb-2 pb-2 border-bottom">
+          <div style="font-size:13px;font-weight:600;">{{ ev.title }}</div>
+          <div style="font-size:12px;color:#64748b;"><i class="bi bi-calendar3 me-1"></i>{{ ev.event_date.strftime('%d %b %Y, %I:%M %p') }}</div>
+          <div style="font-size:12px;color:#64748b;"><i class="bi bi-geo-alt me-1"></i>{{ ev.location or 'Cathedral' }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+{% if head_data %}
+<script>
+new Chart(document.getElementById('myHeadChart'),{
+  type:'bar',
+  data:{
+    labels:{{ head_data|map(attribute='head')|map(attribute='value')|list|tojson }},
+    datasets:[{label:'Amount (₹)',data:{{ head_data|map(attribute='total')|map('float')|list|tojson }},
+    backgroundColor:'rgba(26,46,90,.75)',borderRadius:6}]
+  },
+  options:{responsive:true,plugins:{legend:{display:false}},
+    scales:{y:{beginAtZero:true,ticks:{callback:v=>'₹'+v.toLocaleString('en-IN')}}}}
+});
+</script>
+{% endif %}
+{% endblock %}

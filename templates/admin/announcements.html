@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Announcements{% endblock %}
+{% block page_title %}Announcements{% endblock %}
+{% block content %}
+<div class="ph"><h4>📢 Announcements</h4><p>Post notices visible to all donors.</p></div>
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="fcard">
+      <h6 class="fw-bold mb-3">Post New Announcement</h6>
+      <form method="POST">
+        <div class="mb-3"><label class="form-label">Title *</label><input type="text" name="title" class="form-control" required/></div>
+        <div class="mb-3"><label class="form-label">Content *</label><textarea name="content" class="form-control" rows="4" required></textarea></div>
+        <div class="mb-4"><label class="form-label">Priority</label>
+          <select name="priority" class="form-select"><option value="0">Normal</option><option value="1">Important</option><option value="2">Urgent</option></select></div>
+        <button type="submit" class="btn btn-navy w-100"><i class="bi bi-megaphone me-2"></i>Post Announcement</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    {% for ann in announcements %}
+    <div class="fcard mb-3">
+      <div class="d-flex justify-content-between align-items-start">
+        <h6 class="mb-1">{{ ann.title }}</h6>
+        <div class="d-flex gap-2 align-items-center">
+          <span class="badge {{ 'bg-danger' if ann.priority>=2 else 'bg-warning text-dark' if ann.priority==1 else 'bg-secondary' }}">{{ 'Urgent' if ann.priority>=2 else 'Important' if ann.priority==1 else 'Normal' }}</span>
+          <span class="bs-{{ 'confirmed' if ann.is_active else 'cancelled' }}">{{ 'Active' if ann.is_active else 'Hidden' }}</span>
+        </div>
+      </div>
+      <p style="font-size:13px;color:#64748b;margin:8px 0;">{{ ann.content }}</p>
+      <div class="d-flex justify-content-between align-items-center">
+        <span style="font-size:11px;color:#94a3b8;">{{ ann.created_at.strftime('%d %b %Y, %I:%M %p') }}</span>
+        <form method="POST" action="{{ url_for('admin.toggle_announcement', aid=ann.id) }}">
+          <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2">{{ 'Hide' if ann.is_active else 'Show' }}</button>
+        </form>
+      </div>
+    </div>
+    {% else %}<div class="alert alert-info">No announcements yet.</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Church Finances{% endblock %}
+{% block page_title %}Church Finances{% endblock %}
+{% block content %}
+<div class="ph"><h4>📊 Church Financial Transparency</h4><p>All expenses for {{ selected_fy }} – open to all members.</p></div>
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="kcard"><div class="icon-box" style="background:#fee2e2;color:#991b1b;"><i class="bi bi-cash-coin"></i></div>
+      <div class="kval">₹{{ "{:,.0f}".format(total) }}</div><div class="klbl">Total Expenses ({{ selected_fy }})</div></div>
+  </div>
+  <div class="col-md-8">
+    <div class="chart-card h-100"><h6>Expense by Category</h6><canvas id="expCatChart" height="100"></canvas></div>
+  </div>
+</div>
+<div class="fcard mb-4">
+  <form method="GET" class="row g-2 align-items-end">
+    <div class="col-md-3"><label class="form-label">Financial Year</label>
+      <select name="fy" class="form-select" onchange="this.form.submit()">
+        {% for y in fy_list %}<option value="{{ y }}" {% if y==selected_fy %}selected{% endif %}>{{ y }}</option>{% endfor %}
+      </select></div>
+    <div class="col-md-3">
+      <label class="form-label">From Date</label>
+      <input type="date" name="start_date" class="form-control" value="{{ start_date }}"/>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">To Date</label>
+      <input type="date" name="end_date" class="form-control" value="{{ end_date }}"/>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+      <button type="submit" class="btn btn-navy">Filter</button>
+      <a href="{{ url_for('donor.church_expenses') }}" class="btn btn-outline-secondary"><i class="bi bi-x"></i></a>
+    </div>
+  </form>
+</div>
+{% if start_date or end_date %}
+<div class="mb-3">
+  <span class="badge bg-light text-dark border">
+    <i class="bi bi-funnel me-1"></i>Active Filters: Date {{ start_date or 'Any' }} to {{ end_date or 'Any' }}
+  </span>
+</div>
+{% endif %}
+<div class="tcard">
+  <div class="table-responsive"><table class="table mb-0">
+    <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Payee</th><th class="text-end">Amount</th></tr></thead>
+    <tbody>
+      {% for e in expenses.items %}
+      <tr>
+        <td style="font-size:12px;">{{ e.expense_date.strftime('%d %b %Y') }}</td>
+        <td><span class="badge bg-light text-dark border" style="font-size:11px;">{{ e.category.value }}</span></td>
+        <td style="font-size:13px;">{{ e.description }}</td>
+        <td style="color:#64748b;font-size:12px;">{{ e.payee or '—' }}</td>
+        <td class="text-end fw-bold">₹{{ "{:,.2f}".format(e.amount) }}</td>
+      </tr>
+      {% else %}<tr><td colspan="5" class="text-center text-muted py-4">No expense records found.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  {% if expenses.pages > 1 %}
+  <div class="p-3 border-top"><nav><ul class="pagination pagination-sm mb-0 justify-content-center">
+    {% if expenses.has_prev %}<li class="page-item"><a class="page-link" href="?page={{ expenses.prev_num }}&fy={{ selected_fy }}&start_date={{ start_date }}&end_date={{ end_date }}">‹</a></li>{% endif %}
+    {% for p in expenses.iter_pages() %}{% if p %}<li class="page-item {% if p==expenses.page %}active{% endif %}"><a class="page-link" href="?page={{ p }}&fy={{ selected_fy }}&start_date={{ start_date }}&end_date={{ end_date }}">{{ p }}</a></li>{% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}{% endfor %}
+    {% if expenses.has_next %}<li class="page-item"><a class="page-link" href="?page={{ expenses.next_num }}&fy={{ selected_fy }}&start_date={{ start_date }}&end_date={{ end_date }}">›</a></li>{% endif %}
+  </ul></nav></div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+new Chart(document.getElementById('expCatChart'),{type:'bar',data:{labels:{{ cat_totals|map(attribute='category')|map(attribute='value')|list|tojson }},datasets:[{data:{{ cat_totals|map(attribute='total')|map('float')|list|tojson }},backgroundColor:'rgba(220,38,38,.7)',borderRadius:5}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:v=>'₹'+v.toLocaleString('en-IN')}}}}});
+</script>
+{% endblock %}

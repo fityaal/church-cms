@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}New Expense – ASC CMS{% endblock %}
+{% block page_title %}New Expense Entry{% endblock %}
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div><h4>📋 New Expense Entry</h4><p>Record a church expenditure with voucher number.</p></div>
+  <a href="{{ url_for('admin.expenses') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+</div>
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="fcard">
+      <form method="POST" action="{{ url_for('admin.new_expense') }}">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Expense Date <span class="text-danger">*</span></label>
+            <input type="date" name="expense_date" class="form-control" value="{{ today }}" required/>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Category <span class="text-danger">*</span></label>
+            <select name="category" class="form-select" required>
+              <option value="">-- Select Category --</option>
+              {% for c in categories %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Description <span class="text-danger">*</span></label>
+            <input type="text" name="description" class="form-control" required placeholder="Brief description of the expense"/>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Payee / Vendor</label>
+            <input type="text" name="payee" class="form-control" placeholder="Name of person or vendor paid"/>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Amount (₹) <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text">₹</span>
+              <input type="number" name="amount" class="form-control" min="0.01" step="0.01" required placeholder="0.00" style="text-align:right;"/>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Payment Mode <span class="text-danger">*</span></label>
+            <select name="payment_mode" class="form-select" required>
+              {% for m in payment_modes %}<option value="{{ m.name }}">{{ m.value }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Cheque / UTR / Reference No</label>
+            <input type="text" name="payment_reference" class="form-control" placeholder="Reference number if applicable"/>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Internal Notes</label>
+            <textarea name="notes" class="form-control" rows="2" placeholder="Optional remarks"></textarea>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-navy w-100" style="padding:12px;font-size:15px;font-weight:600;">
+              <i class="bi bi-save me-2"></i>Save Expense Voucher
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

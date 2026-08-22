@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}{% if donor %}Edit{% else %}Add{% endif %} Member – ASC CMS{% endblock %}
+{% block page_title %}{% if donor %}Edit{% else %}Add{% endif %} Member{% endblock %}
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div><h4>👤 {% if donor %}Edit{% else %}Add New{% endif %} Member</h4></div>
+  <a href="{{ url_for('admin.donors') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+</div>
+<div class="row justify-content-center"><div class="col-lg-6">
+  <div class="fcard">
+    <form method="POST" action="{{ url_for('admin.edit_donor', uid=donor.id) if donor else url_for('admin.new_donor') }}">
+      <div class="mb-3"><label class="form-label">Full Name <span class="text-danger">*</span></label>
+        <input type="text" name="full_name" class="form-control" required value="{{ donor.full_name if donor else '' }}" placeholder="Full name of the member"/></div>
+      {% if not donor %}
+      <div class="mb-3"><label class="form-label">Mobile Number <span class="text-danger">*</span></label>
+        <div class="input-group"><span class="input-group-text"><i class="bi bi-phone"></i></span>
+          <input type="tel" name="mobile" class="form-control" required maxlength="15" placeholder="10-digit mobile (used as login ID)"/></div>
+        <div class="form-text">This will be the member's login ID. Default password: <code>Church@123</code></div></div>
+      {% endif %}
+      <div class="mb-3"><label class="form-label">Email Address</label>
+        <input type="email" name="email" class="form-control" value="{{ donor.email if donor and donor.email else '' }}" placeholder="Optional email address"/></div>
+      <div class="mb-4"><label class="form-label">Address</label>
+        <textarea name="address" class="form-control" rows="3" placeholder="Residential address">{{ donor.address if donor and donor.address else '' }}</textarea></div>
+      <button type="submit" class="btn btn-navy w-100" style="padding:12px;font-size:15px;font-weight:600;">
+        <i class="bi bi-save me-2"></i>{% if donor %}Update{% else %}Register{% endif %} Member
+      </button>
+    </form>
+  </div>
+</div></div>
+{% endblock %}

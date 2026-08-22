@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Expenditure Heads{% endblock %}
+{% block page_title %}Manage Expenditure Heads{% endblock %}
+{% block content %}
+<div class="ph d-flex justify-content-between">
+  <div><h4>📑 Expenditure Heads</h4><p>Manage categories for church expenses.</p></div>
+  <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#newHeadModal"><i class="bi bi-plus-circle me-2"></i>Add New Head</button>
+</div>
+
+<div class="tcard">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead><tr><th>#</th><th>Name</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for h in heads %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ h.name }}</td>
+          <td>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-secondary py-0 px-2" data-bs-toggle="modal" data-bs-target="#editHeadModal{{ h.id }}"><i class="bi bi-pencil"></i></button>
+              <form method="POST" action="{{ url_for('admin.delete_expenditure_head', hid=h.id) }}" onsubmit="return confirm('Delete this head?')" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+
+            <!-- Edit Modal -->
+            <div class="modal fade" id="editHeadModal{{ h.id }}" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header"><h5>Edit Head</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                  <form method="POST" action="{{ url_for('admin.edit_expenditure_head', hid=h.id) }}">
+                    <div class="modal-body">
+                      <label class="form-label">Head Name</label>
+                      <input type="text" name="name" class="form-control" value="{{ h.name }}" required/>
+                    </div>
+                    <div class="modal-footer"><button type="submit" class="btn btn-navy">Save Changes</button></div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="text-center text-muted py-4">No heads defined.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- New Head Modal -->
+<div class="modal fade" id="newHeadModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5>Add New Expenditure Head</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <form method="POST" action="{{ url_for('admin.new_expenditure_head') }}">
+        <div class="modal-body">
+          <label class="form-label">Head Name</label>
+          <input type="text" name="name" class="form-control" placeholder="e.g. Electricity Bill" required/>
+        </div>
+        <div class="modal-footer"><button type="submit" class="btn btn-navy">Add Head</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Receipt {{ donation.receipt_number }} – ASC CMS{% endblock %}
+{% block page_title %}Receipt {{ donation.receipt_number }}{% endblock %}
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div><h4>🧾 Receipt Preview</h4><p>Donation receipt for {{ donation.donor_display_name }}</p></div>
+  <div class="d-flex gap-2">
+    {% if donation.donor and donation.donor.mobile %}
+    <a href="https://wa.me/91{{ donation.donor.mobile }}?text={{ ('*Receipt from All Saints Cathedral, Nagpur*%0A%0A' ~
+      'Hello ' ~ donation.donor_display_name ~ ',%0A%0A' ~
+      'Thank you for your donation of *₹' ~ '{:,.2f}'.format(donation.total_amount) ~ '* via ' ~ donation.payment_mode.value ~ '.%0A' ~
+      'Receipt No: *' ~ donation.receipt_number ~ '*%0A' ~
+      'Date: *' ~ donation.donation_date.strftime('%d %b %Y') ~ '*%0A%0A' ~
+      'You can download your receipt here: ' ~ url_for('admin.download_receipt', did=donation.id, _external=True) ~ '%0A%0A' ~
+      'God Bless You!') | urlencode }}" 
+       target="_blank" class="btn btn-success"><i class="bi bi-whatsapp me-2"></i>WhatsApp</a>
+    {% endif %}
+    <a href="{{ url_for('admin.download_receipt', did=donation.id) }}" class="btn btn-gold"><i class="bi bi-file-pdf me-2"></i>Download PDF</a>
+    <button onclick="window.print()" class="btn btn-navy"><i class="bi bi-printer me-2"></i>Print</button>
+    <a href="{{ url_for('admin.donations') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  </div>
+</div>
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    {% if donation.status == 'Confirmed' %}
+    <div class="alert alert-success py-2 mb-3" style="border-radius:8px;font-size:13px;">
+      <i class="bi bi-check-circle-fill me-2"></i>Confirmed on {{ donation.confirmed_at.strftime('%d %b %Y, %I:%M %p') if donation.confirmed_at else '—' }}
+    </div>
+    {% elif donation.status == 'Pending' %}
+    <div class="alert alert-warning py-2 mb-3 d-flex justify-content-between align-items-center" style="border-radius:8px;font-size:13px;">
+      <span><i class="bi bi-clock me-2"></i>Pending confirmation.</span>
+      <form method="POST" action="{{ url_for('admin.confirm_donation', did=donation.id) }}">
+        <button type="submit" class="btn btn-sm btn-warning fw-bold">Confirm Now</button>
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="receipt-paper" id="receiptPaper" style="background-color: #fffde7; border: 2px solid #fbc02d;">
+      <div class="church-header" style="text-align:center;margin-bottom:14px;">
+        <div style="font-size:28px;color:#1a2e5a;">✝</div>
+        <h2 style="font-size:20px;font-weight:700;margin:2px 0;">All Saints' Cathedral, Nagpur</h2>
+        <p style="font-style:italic;margin:2px 0;font-size:13px;"><em>DIOCESE OF NAGPUR (C.N.I.)</em></p>
+        <div class="receipt-title" style="background-color: #fbc02d; color: #000;">RECEIPT</div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;margin:14px 0 8px;font-size:13px;">
+        <span><strong>No.</strong> {{ donation.receipt_number }}</span>
+        <span><strong>Date:</strong> {{ donation.donation_date.strftime('%d %B %Y') }}</span>
+      </div>
+      <hr style="border-color:#000;margin:4px 0;"/>
+      <p style="font-size:13px;margin:8px 0;">Received with Thanks from &nbsp;<strong>{{ donation.donor_display_name }}</strong></p>
+      <hr style="border-color:#ccc;margin:4px 0;"/>
+      <p style="font-size:13px;margin:8px 0;">Sum of Rupees &nbsp;<strong id="amtWords">—</strong></p>
+      <p style="font-size:13px;margin:8px 0 14px;">by &nbsp;<strong>{{ donation.payment_mode.value }}{% if donation.payment_reference %} No. {{ donation.payment_reference }}{% endif %}</strong></p>
+
+      <table class="r-table">
+        <thead><tr><th style="width:38px;text-align:center;">S.N.</th><th style="text-align:left;padding-left:8px;">PARTICULARS</th><th>REMARKS</th><th style="width:80px;text-align:right;">Rs.</th><th style="width:50px;text-align:center;">Ps.</th></tr></thead>
+        <tbody>
+          {% set items_dict = {} %}
+          {% set remarks_dict = {} %}
+          {% for item in donation.items %}
+            {% set _ = items_dict.update({item.head.name: item.amount|float}) %}
+            {% set _ = remarks_dict.update({item.head.name: item.remarks or ''}) %}
+          {% endfor %}
+          {% set head_list = [('STEWARDSHIP','Stewardship'),('DONATION','Donation'),('WORSHIP_OFFERING','Worship Offering'),('THANKS_OFFERING','Thanks Offering'),('SUNDAY_SCHOOL_OFFERING','Sunday School Offering'),('COTTAGE_PRAYER_MEETING','Cottage Prayer Meeting Offering'),('MARRIAGE_BANS_FEE','Marriage Bans Fee'),('BAPTISM_CERTIFICATE_FEE','Baptism Certificate Fee'),('FESTIVAL_OFFERING','Festival Offering'),('SALE_AUCTION','Sale / Auction'),('OTHER','Other')] %}
+          {% for hname, hlabel in head_list %}
+          {% set amt = items_dict.get(hname, 0) %}
+          {% set rem = remarks_dict.get(hname, '') %}
+          <tr style="{% if amt > 0 %}background:#fff9c4;font-weight:600;{% endif %}">
+            <td style="text-align:center;">{{ loop.index }}</td>
+            <td style="padding-left:8px;">{{ hlabel }}</td>
+            <td style="font-size: 11px; font-style: italic; color: #555;">{{ rem }}</td>
+            <td style="text-align:right;">{% if amt > 0 %}{{ '{:,.0f}'.format(amt) }}{% endif %}</td>
+            <td style="text-align:center;">{% if amt > 0 %}{{ '{:02.0f}'.format((amt%1)*100) }}{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="background:#fbc02d;font-weight:700;font-size:14px;color:#000;">
+            <td colspan="3" style="text-align:right;padding-right:8px;">TOTAL</td>
+            <td style="text-align:right;">{{ '{:,.0f}'.format(donation.total_amount) }}</td>
+            <td style="text-align:center;">{{ '{:02.0f}'.format((donation.total_amount%1)*100) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div style="text-align:right;margin-top:28px;font-weight:700;font-size:13px;">Priest in Charge / Treasurer</div>
+      <hr style="border-color:#ccc;margin:18px 0 6px;"/>
+      <p style="font-size:10px;color:#999;text-align:center;margin:0;">All Saints' Cathedral, Nagpur &nbsp;|&nbsp; Diocese of Nagpur (C.N.I.) &nbsp;|&nbsp; Computer Generated Receipt</p>
+    </div>
+
+    <div class="fcard mt-3">
+      <h6 class="fw-bold mb-3" style="color:var(--navy);">Receipt Metadata</h6>
+      <div class="row g-2" style="font-size:13px;">
+        <div class="col-6"><span class="text-muted">Donor Mobile:</span> {{ donation.donor.mobile if donation.donor else '—' }}</div>
+        <div class="col-6"><span class="text-muted">Financial Year:</span> {{ donation.financial_year }}</div>
+        <div class="col-6"><span class="text-muted">Payment Mode:</span> {{ donation.payment_mode.value }}</div>
+        <div class="col-6"><span class="text-muted">Total Amount:</span> <strong>₹{{ "{:,.2f}".format(donation.total_amount) }}</strong></div>
+        {% if donation.razorpay_payment_id %}
+        <div class="col-12"><span class="text-muted">Razorpay ID:</span> <code>{{ donation.razorpay_payment_id }}</code></div>
+        {% endif %}
+        {% if donation.notes %}
+        <div class="col-12"><span class="text-muted">Notes:</span> {{ donation.notes }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function numWords(n){
+  if(n===0)return'Zero Rupees Only';
+  const o=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'],t=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function two(n){return n<20?o[n]:t[Math.floor(n/10)]+(n%10?' '+o[n%10]:'');}
+  function three(n){if(!n)return'';if(n<100)return two(n);return o[Math.floor(n/100)]+' Hundred'+(n%100?' and '+two(n%100):'');}
+  let r=Math.floor(n),ps=Math.round((n-r)*100),parts=[];
+  if(r>=10000000){parts.push(three(Math.floor(r/10000000))+' Crore');r%=10000000;}
+  if(r>=100000){parts.push(three(Math.floor(r/100000))+' Lakh');r%=100000;}
+  if(r>=1000){parts.push(three(Math.floor(r/1000))+' Thousand');r%=1000;}
+  if(r)parts.push(three(r));
+  return parts.join(' ')+' Rupees'+(ps?' and '+two(ps)+' Paise':'')+' Only';
+}
+document.getElementById('amtWords').textContent = numWords({{ donation.total_amount|float }});
+</script>
+<style>
+@media print {
+  #sidebar,#topbar,.ph,.alert,.fcard:not(#receiptPaper){ display:none!important; }
+  #main{ margin:0!important;padding:10px!important; }
+  .receipt-paper{ box-shadow:none!important;border:1px solid #000!important;max-width:100%!important; }
+}
+</style>
+{% endblock %}

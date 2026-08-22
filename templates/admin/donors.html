@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Members – ASC CMS{% endblock %}
+{% block page_title %}Members / Donors{% endblock %}
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div><h4>👥 Members & Donors</h4><p>Manage all registered church members.</p></div>
+  <a href="{{ url_for('admin.new_donor') }}" class="btn btn-navy"><i class="bi bi-person-plus me-2"></i>Add Member</a>
+</div>
+<div class="fcard mb-4">
+  <form method="GET" class="row g-2 align-items-end">
+    <div class="col-md-6"><label class="form-label">Search</label>
+      <input type="text" name="search" class="form-control" placeholder="Name / Mobile / Email" value="{{ search }}"/></div>
+    <div class="col-md-2"><button type="submit" class="btn btn-navy"><i class="bi bi-search me-1"></i>Search</button></div>
+    <div class="col-md-2"><a href="{{ url_for('admin.donors') }}" class="btn btn-outline-secondary">Clear</a></div>
+  </form>
+</div>
+<div class="tcard">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>#</th><th>Name</th><th>Mobile</th><th>Email</th><th>Total Donated</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for d in donors.items %}
+        <tr>
+          <td style="color:#64748b;">{{ loop.index + (donors.page-1)*20 }}</td>
+          <td class="fw-bold">{{ d.full_name }}</td>
+          <td>{{ d.mobile }}</td>
+          <td style="color:#64748b;font-size:12px;">{{ d.email or '—' }}</td>
+          <td class="fw-bold text-success">₹{{ "{:,.0f}".format(d.total_donated) }}</td>
+          <td><span class="bs-{{ 'confirmed' if d.is_active else 'cancelled' }}">{{ 'Active' if d.is_active else 'Inactive' }}</span></td>
+          <td style="font-size:12px;color:#64748b;">{{ d.created_at.strftime('%d %b %Y') }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{{ url_for('admin.donor_detail', uid=d.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2" title="View"><i class="bi bi-eye"></i></a>
+              <a href="{{ url_for('admin.edit_donor', uid=d.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Edit"><i class="bi bi-pencil"></i></a>
+              {% if current_user.is_admin %}
+              <form method="POST" action="{{ url_for('admin.toggle_donor', uid=d.id) }}" style="display:inline;">
+                <button type="submit" class="btn btn-sm {{ 'btn-outline-danger' if d.is_active else 'btn-outline-success' }} py-0 px-2" title="{{ 'Deactivate' if d.is_active else 'Activate' }}">
+                  <i class="bi bi-{{ 'person-dash' if d.is_active else 'person-check' }}"></i>
+                </button>
+              </form>
+              <form method="POST" action="{{ url_for('admin.delete_donor', uid=d.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this member? This action cannot be undone.');">
+                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Delete"><i class="bi bi-trash"></i></button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-people fs-3 d-block mb-2"></i>No members found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if donors.pages > 1 %}
+  <div class="p-3 border-top"><nav><ul class="pagination pagination-sm mb-0 justify-content-center">
+    {% if donors.has_prev %}<li class="page-item"><a class="page-link" href="?page={{ donors.prev_num }}&search={{ search }}">‹</a></li>{% endif %}
+    {% for p in donors.iter_pages() %}{% if p %}<li class="page-item {% if p==donors.page %}active{% endif %}"><a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a></li>{% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}{% endfor %}
+    {% if donors.has_next %}<li class="page-item"><a class="page-link" href="?page={{ donors.next_num }}&search={{ search }}">›</a></li>{% endif %}
+  </ul></nav></div>
+  {% endif %}
+</div>
+{% endblock %}

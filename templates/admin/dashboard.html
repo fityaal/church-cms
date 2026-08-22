@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard – ASC CMS{% endblock %}
+{% block page_title %}Admin Dashboard{% endblock %}
+{% block content %}
+<div class="ph">
+  <h4>✝ Dashboard</h4>
+  <p>Financial Year: <strong>{{ fy }}</strong> &nbsp;|&nbsp; All Saints' Cathedral, Nagpur</p>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-3 col-md-6">
+    <div class="kcard">
+      <div class="icon-box" style="background:#dbeafe;color:#1d4ed8;"><i class="bi bi-cash-stack"></i></div>
+      <div class="kval">₹{{ "{:,.0f}".format(total_collection) }}</div>
+      <div class="klbl">Total Collection ({{ fy }})</div>
+      <div class="kchg text-success"><i class="bi bi-arrow-up-right"></i> {{ total_receipts|int }} receipts</div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="kcard">
+      <div class="icon-box" style="background:#fce7f3;color:#be185d;"><i class="bi bi-receipt-cutoff"></i></div>
+      <div class="kval">₹{{ "{:,.0f}".format(total_expenses) }}</div>
+      <div class="klbl">Total Expenditure ({{ fy }})</div>
+      <div class="kchg text-muted"><i class="bi bi-graph-down"></i> Current year</div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="kcard">
+      <div class="icon-box" style="background:{% if net_balance>=0 %}#dcfce7;color:#166534;{% else %}#fee2e2;color:#991b1b;{% endif %}"><i class="bi bi-bank2"></i></div>
+      <div class="kval" style="color:{% if net_balance>=0 %}#166534;{% else %}#991b1b;{% endif %}">₹{{ "{:,.0f}".format(net_balance|abs) }}</div>
+      <div class="klbl">Net Balance ({{ 'Surplus' if net_balance>=0 else 'Deficit' }})</div>
+      <div class="kchg"><i class="bi bi-calculator"></i> Collection − Expenses</div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="kcard">
+      <div class="icon-box" style="background:#ede9fe;color:#6d28d9;"><i class="bi bi-people"></i></div>
+      <div class="kval">{{ total_donors }}</div>
+      <div class="klbl">Registered Members</div>
+      {% if pending_count > 0 %}
+      <div class="kchg text-warning"><i class="bi bi-clock"></i> {{ pending_count }} pending confirmation</div>
+      {% else %}
+      <div class="kchg text-success"><i class="bi bi-check-circle"></i> All receipts confirmed</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-8">
+    <div class="chart-card">
+      <h6><i class="bi bi-bar-chart-line me-2"></i>Monthly Income vs Expenditure ({{ fy }})</h6>
+      <canvas id="monthlyChart" height="90"></canvas>
+    </div>
+  </div>
+  <div class="col-xl-4">
+    <div class="chart-card">
+      <h6><i class="bi bi-pie-chart me-2"></i>Collection by Head ({{ fy }})</h6>
+      <canvas id="headChart" height="180"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Bank + Recent Donations -->
+<div class="row g-3 mb-4">
+  {% if bank_accounts %}
+  <div class="col-xl-4">
+    <div class="tcard h-100">
+      <div class="tcard-hdr">
+        <h6><i class="bi bi-bank me-2"></i>Bank Balances</h6>
+        <a href="{{ url_for('admin.bank_accounts') }}" class="btn btn-sm btn-navy">Manage</a>
+      </div>
+      <div class="p-3">
+        {% for acc in bank_accounts %}
+        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+          <div>
+            <div style="font-size:13px;font-weight:600;">{{ acc.account_name }}</div>
+            <div style="font-size:11px;color:#64748b;">{{ acc.bank_name }} – {{ acc.account_number[-4:] }}xxxx</div>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:{% if acc.current_balance>=0 %}#166534{% else %}#991b1b{% endif %};">
+            ₹{{ "{:,.0f}".format(acc.current_balance) }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="col-xl-{% if bank_accounts %}8{% else %}12{% endif %}">
+    <div class="tcard">
+      <div class="tcard-hdr">
+        <h6><i class="bi bi-clock-history me-2"></i>Recent Receipts</h6>
+        <div class="d-flex gap-2">
+          {% if pending_count %}
+          <a href="{{ url_for('admin.donations', status='Pending') }}" class="btn btn-sm btn-warning">{{ pending_count }} Pending</a>
+          {% endif %}
+          <a href="{{ url_for('admin.donations') }}" class="btn btn-sm btn-navy">View All</a>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead><tr><th>Receipt No</th><th>Donor</th><th>Date</th><th>Amount</th><th>Mode</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {% for d in recent_donations %}
+            <tr>
+              <td><code style="font-size:12px;">{{ d.receipt_number }}</code></td>
+              <td>{{ d.donor_display_name }}</td>
+              <td>{{ d.donation_date.strftime('%d %b %Y') }}</td>
+              <td class="fw-600">₹{{ "{:,.2f}".format(d.total_amount) }}</td>
+              <td><span class="badge bg-light text-dark border" style="font-size:11px;">{{ d.payment_mode.value }}</span></td>
+              <td><span class="bs-{{ d.status|lower }}">{{ d.status }}</span></td>
+              <td><a href="{{ url_for('admin.view_receipt', did=d.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;"><i class="bi bi-eye"></i></a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-center text-muted py-4">No donations yet for {{ fy }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Head-wise Summary + Announcements -->
+<div class="row g-3">
+  <div class="col-xl-6">
+    <div class="tcard">
+      <div class="tcard-hdr"><h6><i class="bi bi-list-columns me-2"></i>Head-wise Collection ({{ fy }})</h6></div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead><tr><th>#</th><th>Donation Head</th><th class="text-end">Amount</th></tr></thead>
+          <tbody>
+            {% for row in head_data %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ row.head }}</td>
+              <td class="text-end fw-600">₹{{ "{:,.2f}".format(row.total) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="text-center text-muted py-3">No data</td></tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr style="background:#f8fafc;font-weight:700;">
+              <td colspan="2">TOTAL</td>
+              <td class="text-end">₹{{ "{:,.2f}".format(total_collection) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-6">
+    <div class="tcard">
+      <div class="tcard-hdr">
+        <h6><i class="bi bi-megaphone me-2"></i>Announcements</h6>
+        <a href="{{ url_for('admin.announcements') }}" class="btn btn-sm btn-navy">Manage</a>
+      </div>
+      <div class="p-3">
+        {% for ann in announcements %}
+        <div class="mb-3 pb-3 border-bottom">
+          <div class="d-flex justify-content-between">
+            <div style="font-size:13.5px;font-weight:600;">{{ ann.title }}</div>
+            <span class="badge {{ 'bg-danger' if ann.priority >= 2 else 'bg-warning text-dark' if ann.priority == 1 else 'bg-secondary' }}" style="font-size:10px;">{{ 'Urgent' if ann.priority >= 2 else 'Normal' if ann.priority == 1 else 'Info' }}</span>
+          </div>
+          <div style="font-size:12.5px;color:#64748b;margin-top:4px;">{{ ann.content[:120] }}{% if ann.content|length > 120 %}...{% endif %}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px;">{{ ann.created_at.strftime('%d %b %Y') }}</div>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-3 mb-0" style="font-size:13px;">No active announcements.</p>
+        {% endfor %}
+        <a href="{{ url_for('admin.announcements') }}" class="btn btn-sm btn-outline-secondary w-100 mt-2"><i class="bi bi-plus me-1"></i>Post Announcement</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const incData  = {{ monthly_income  | tojson }};
+const expData  = {{ monthly_expense | tojson }};
+const headData = {{ head_data       | tojson }};
+
+// Build full 12-month arrays
+const incArr = Array(12).fill(0), expArr = Array(12).fill(0);
+incData.forEach(r => { incArr[parseInt(r.m)-1] = parseFloat(r.total||0); });
+expData.forEach(r => { expArr[parseInt(r.m)-1] = parseFloat(r.total||0); });
+
+new Chart(document.getElementById('monthlyChart'), {
+  type: 'bar',
+  data: {
+    labels: monthNames,
+    datasets: [
+      { label: 'Income', data: incArr, backgroundColor: 'rgba(26,46,90,.75)', borderRadius: 5 },
+      { label: 'Expense', data: expArr, backgroundColor: 'rgba(200,150,12,.75)', borderRadius: 5 }
+    ]
+  },
+  options: { responsive: true, plugins:{ legend:{ position:'top' } },
+    scales:{ y:{ beginAtZero:true, ticks:{ callback: v => '₹'+v.toLocaleString('en-IN') } } } }
+});
+
+// Head pie
+const hdLabels = headData.map(r => r.head);
+const hdValues = headData.map(r => parseFloat(r.total||0));
+const palette  = ['#1a2e5a','#c8960c','#2563eb','#dc2626','#16a34a','#9333ea','#ea580c','#0891b2','#be185d','#65a30d','#64748b'];
+new Chart(document.getElementById('headChart'), {
+  type: 'doughnut',
+  data: { labels: hdLabels, datasets:[{ data: hdValues, backgroundColor: palette, borderWidth: 2 }] },
+  options: { responsive: true, plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } } } }
+});
+</script>
+{% endblock %}

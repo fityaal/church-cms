@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Events{% endblock %}
+{% block page_title %}Church Events{% endblock %}
+{% block content %}
+<div class="ph"><h4>📅 Church Events</h4><p>Manage upcoming and past events.</p></div>
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="fcard">
+      <h6 class="fw-bold mb-3">Add New Event</h6>
+      <form method="POST">
+        <div class="mb-3"><label class="form-label">Title *</label><input type="text" name="title" class="form-control" required/></div>
+        <div class="mb-3"><label class="form-label">Type</label>
+          <select name="event_type" class="form-select"><option>Sunday Service</option><option>Prayer Meeting</option><option>Special Service</option><option>Wedding</option><option>Funeral</option><option>Youth Event</option><option>Sunday School</option><option>Other</option></select></div>
+        <div class="mb-3"><label class="form-label">Date & Time *</label><input type="datetime-local" name="event_date" class="form-control" required/></div>
+        <div class="mb-3"><label class="form-label">Location</label><input type="text" name="location" class="form-control" value="All Saints' Cathedral, Nagpur"/></div>
+        <div class="mb-3"><label class="form-label">Description</label><textarea name="description" class="form-control" rows="3"></textarea></div>
+        <div class="mb-4"><label><input type="checkbox" name="is_public" checked class="me-2"/>Visible to donors</label></div>
+        <button type="submit" class="btn btn-navy w-100"><i class="bi bi-calendar-plus me-2"></i>Create Event</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    {% for ev in events %}
+    <div class="fcard mb-3">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h6 class="mb-1">{{ ev.title }}</h6>
+          <span class="badge bg-light text-dark border" style="font-size:11px;">{{ ev.event_type }}</span>
+          <span class="badge {{ 'bg-success' if ev.event_date > now else 'bg-secondary' }} ms-1" style="font-size:11px;">{{ 'Upcoming' if ev.event_date > now else 'Past' }}</span>
+        </div>
+        <form method="POST" action="{{ url_for('admin.delete_event', eid=ev.id) }}" onsubmit="return confirm('Delete this event?')">
+          <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+      <div style="font-size:13px;margin-top:8px;" class="row g-1">
+        <div class="col-12"><i class="bi bi-calendar3 me-2 text-muted"></i>{{ ev.event_date.strftime('%d %b %Y, %I:%M %p') }}</div>
+        <div class="col-12"><i class="bi bi-geo-alt me-2 text-muted"></i>{{ ev.location or '—' }}</div>
+        {% if ev.description %}<div class="col-12 text-muted">{{ ev.description[:100] }}</div>{% endif %}
+      </div>
+    </div>
+    {% else %}<div class="alert alert-info">No events yet.</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}<script>const now=new Date();</script>{% endblock %}

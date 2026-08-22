@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}{% if staff %}Edit Staff{% else %}Add Staff{% endif %}{% endblock %}
+{% block page_title %}{% if staff %}Edit Staff User{% else %}Add Staff User{% endif %}{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-6"><div class="fcard">
+  <h6 class="fw-bold mb-4">{% if staff %}Edit Staff / Admin User{% else %}Add Staff / Admin User{% endif %}</h6>
+  <form method="POST">
+    <div class="mb-3"><label class="form-label">Full Name *</label><input type="text" name="full_name" class="form-control" required value="{{ staff.full_name if staff else '' }}"/></div>
+    <div class="mb-3"><label class="form-label">Mobile *</label><input type="tel" name="mobile" class="form-control" required value="{{ staff.mobile if staff else '' }}" {% if staff %}readonly{% endif %}/></div>
+    <div class="mb-3"><label class="form-label">Email</label><input type="email" name="email" class="form-control" value="{{ staff.email if staff else '' }}"/></div>
+    <div class="mb-4"><label class="form-label">Role *</label>
+      <select name="role" class="form-select" required>
+        {% for r in roles %}{% if r.name != 'DONOR' %}<option value="{{ r.name }}" {% if staff and staff.role == r %}selected{% endif %}>{{ r.value }}</option>{% endif %}{% endfor %}
+      </select></div>
+    <button type="submit" class="btn btn-navy w-100"><i class="bi bi-save me-2"></i>{% if staff %}Update Staff Member{% else %}Add Staff Member{% endif %}</button>
+  </form>
+</div></div></div>
+{% endblock %}

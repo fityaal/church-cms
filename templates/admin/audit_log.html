@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Audit Log{% endblock %}
+{% block page_title %}Audit Log{% endblock %}
+{% block content %}
+<div class="ph"><h4>🛡️ Audit Log</h4><p>All system activities are tracked for security.</p></div>
+<div class="tcard">
+  <div class="table-responsive"><table class="table mb-0">
+    <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Entity</th><th>IP Address</th><th>Details</th></tr></thead>
+    <tbody>
+      {% for log in logs.items %}
+      <tr>
+        <td style="font-size:12px;color:#64748b;white-space:nowrap;">{{ log.created_at.strftime('%d %b %Y %H:%M') }}</td>
+        <td style="font-size:13px;">{{ log.user.full_name if log.user else 'System' }}</td>
+        <td><span class="badge {{ 'bg-danger' if 'DELETE' in log.action else 'bg-success' if 'CREATE' in log.action or 'CONFIRM' in log.action else 'bg-secondary' }}" style="font-size:11px;">{{ log.action }}</span></td>
+        <td style="font-size:12px;color:#64748b;">{{ log.entity_type or '—' }}{% if log.entity_id %} #{{ log.entity_id }}{% endif %}</td>
+        <td style="font-size:12px;color:#64748b;">{{ log.ip_address or '—' }}</td>
+        <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;">{{ log.details or '—' }}</td>
+      </tr>
+      {% else %}<tr><td colspan="6" class="text-center text-muted py-4">No audit records found.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  {% if logs.pages > 1 %}
+  <div class="p-3 border-top"><nav><ul class="pagination pagination-sm mb-0 justify-content-center">
+    {% if logs.has_prev %}<li class="page-item"><a class="page-link" href="?page={{ logs.prev_num }}">‹</a></li>{% endif %}
+    {% for p in logs.iter_pages() %}{% if p %}<li class="page-item {% if p==logs.page %}active{% endif %}"><a class="page-link" href="?page={{ p }}">{{ p }}</a></li>{% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}{% endfor %}
+    {% if logs.has_next %}<li class="page-item"><a class="page-link" href="?page={{ logs.next_num }}">›</a></li>{% endif %}
+  </ul></nav></div>
+  {% endif %}
+</div>
+{% endblock %}

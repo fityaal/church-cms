@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block title %}Donations – ASC CMS{% endblock %}
+{% block page_title %}Donations & Receipts{% endblock %}
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div><h4>💰 Donations & Receipts</h4><p>Manage all donation receipts across financial years.</p></div>
+  <a href="{{ url_for('admin.new_donation') }}" class="btn btn-navy"><i class="bi bi-plus-circle me-2"></i>New Receipt</a>
+</div>
+
+<!-- Filters -->
+<div class="fcard mb-4">
+  <form method="GET" class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label">Search</label>
+      <input type="text" name="search" class="form-control" placeholder="Name / Mobile / Receipt No" value="{{ search }}"/>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Financial Year</label>
+      <select name="fy" class="form-select">
+        {% for y in financial_years %}<option value="{{ y }}" {% if y==selected_fy %}selected{% endif %}>{{ y }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        <option value="">All</option>
+        <option value="Confirmed" {% if selected_status=='Confirmed' %}selected{% endif %}>Confirmed</option>
+        <option value="Pending"   {% if selected_status=='Pending'   %}selected{% endif %}>Pending</option>
+        <option value="Cancelled" {% if selected_status=='Cancelled' %}selected{% endif %}>Cancelled</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Donation Head</label>
+      <select name="head" class="form-select">
+        <option value="">All Heads</option>
+        {% for h in heads %}<option value="{{ h.name }}" {% if h.name==selected_head %}selected{% endif %}>{{ h.value }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">From Date</label>
+      <input type="date" name="start_date" class="form-control" value="{{ start_date }}"/>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">To Date</label>
+      <input type="date" name="end_date" class="form-control" value="{{ end_date }}"/>
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-navy flex-fill"><i class="bi bi-search me-1"></i>Filter</button>
+      <a href="{{ url_for('admin.donations') }}" class="btn btn-outline-secondary"><i class="bi bi-x"></i></a>
+    </div>
+  </form>
+</div>
+{% if start_date or end_date %}
+<div class="mb-3">
+  <span class="badge bg-light text-dark border">
+    <i class="bi bi-funnel me-1"></i>Active Filters: Date {{ start_date or 'Any' }} to {{ end_date or 'Any' }}
+  </span>
+</div>
+{% endif %}
+
+<!-- Summary bar -->
+<div class="alert alert-light border mb-3 d-flex justify-content-between align-items-center" style="border-radius:10px;font-size:13px;">
+  <span><i class="bi bi-info-circle me-2"></i>Showing <strong>{{ donations.total }}</strong> records &nbsp;|&nbsp; Total Confirmed: <strong>₹{{ "{:,.2f}".format(total_amt) }}</strong></span>
+  <a href="{{ url_for('admin.reports') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-bar-chart me-1"></i>Reports</a>
+</div>
+
+<div class="tcard">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Receipt No</th><th>Donor Name</th><th>Mobile</th>
+          <th>Date</th><th>Amount</th><th>Mode</th><th>F.Y.</th>
+          <th>Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in donations.items %}
+        <tr>
+          <td><code style="font-size:12px;">{{ d.receipt_number }}</code></td>
+          <td style="font-weight:500;">{{ d.donor_display_name }}</td>
+          <td style="color:#64748b;">{{ d.donor.mobile if d.donor else '—' }}</td>
+          <td>{{ d.donation_date.strftime('%d %b %Y') }}</td>
+          <td class="fw-bold">₹{{ "{:,.2f}".format(d.total_amount) }}</td>
+          <td><span class="badge bg-light text-dark border" style="font-size:11px;">{{ d.payment_mode.value }}</span></td>
+          <td style="font-size:12px;color:#64748b;">{{ d.financial_year }}</td>
+          <td><span class="bs-{{ d.status|lower }}">{{ d.status }}</span></td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{{ url_for('admin.view_receipt', did=d.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2" title="View Receipt"><i class="bi bi-eye"></i></a>
+              <a href="{{ url_for('admin.edit_donation', did=d.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Edit Receipt"><i class="bi bi-pencil"></i></a>
+              <a href="{{ url_for('admin.download_receipt', did=d.id) }}" class="btn btn-sm btn-outline-success py-0 px-2" title="Download PDF"><i class="bi bi-file-pdf"></i></a>
+              {% if d.status == 'Pending' %}
+              <form method="POST" action="{{ url_for('admin.confirm_donation', did=d.id) }}" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-warning py-0 px-2" title="Confirm"><i class="bi bi-check-circle"></i></button>
+              </form>
+              {% endif %}
+              {% if current_user.is_admin %}
+              <form method="POST" action="{{ url_for('admin.delete_donation', did=d.id) }}" onsubmit="return confirm('Delete receipt {{ d.receipt_number }}?')" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Delete"><i class="bi bi-trash"></i></button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No donations found matching your filters.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <!-- Pagination -->
+  {% if donations.pages > 1 %}
+  <div class="p-3 border-top">
+    <nav><ul class="pagination pagination-sm mb-0 justify-content-center">
+      {% if donations.has_prev %}<li class="page-item"><a class="page-link" href="?page={{ donations.prev_num }}&fy={{ selected_fy }}&status={{ selected_status }}&search={{ search }}&head={{ selected_head }}&start_date={{ start_date }}&end_date={{ end_date }}">‹</a></li>{% endif %}
+      {% for p in donations.iter_pages() %}
+        {% if p %}<li class="page-item {% if p==donations.page %}active{% endif %}"><a class="page-link" href="?page={{ p }}&fy={{ selected_fy }}&status={{ selected_status }}&search={{ search }}&head={{ selected_head }}&start_date={{ start_date }}&end_date={{ end_date }}">{{ p }}</a></li>
+        {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+      {% endfor %}
+      {% if donations.has_next %}<li class="page-item"><a class="page-link" href="?page={{ donations.next_num }}&fy={{ selected_fy }}&status={{ selected_status }}&search={{ search }}&head={{ selected_head }}&start_date={{ start_date }}&end_date={{ end_date }}">›</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

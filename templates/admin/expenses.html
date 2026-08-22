@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}Expenses – ASC CMS{% endblock %}
+{% block page_title %}Expenditure Records{% endblock %}
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div><h4>📋 Expenditure Records</h4><p>Track all church expenses by category.</p></div>
+  <a href="{{ url_for('admin.new_expense') }}" class="btn btn-navy"><i class="bi bi-plus-circle me-2"></i>New Expense</a>
+</div>
+<div class="fcard mb-4">
+  <form method="GET" class="row g-2 align-items-end">
+    <div class="col-md-3"><label class="form-label">Search</label>
+      <input type="text" name="search" class="form-control" placeholder="Description / Voucher / Payee" value="{{ search }}"/></div>
+    <div class="col-md-2"><label class="form-label">Financial Year</label>
+      <select name="fy" class="form-select">{% for y in financial_years %}<option value="{{ y }}" {% if y==selected_fy %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></div>
+    <div class="col-md-2">
+      <label class="form-label">Category</label>
+      <select name="category" class="form-select">
+        <option value="">All</option>
+        {% for c in categories %}<option value="{{ c.name }}" {% if selected_category==c.name %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">From Date</label>
+      <input type="date" name="start_date" class="form-control" value="{{ start_date }}"/>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">To Date</label>
+      <input type="date" name="end_date" class="form-control" value="{{ end_date }}"/>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+      <button type="submit" class="btn btn-navy flex-fill"><i class="bi bi-search me-1"></i>Filter</button>
+      <a href="{{ url_for('admin.expenses') }}" class="btn btn-outline-secondary"><i class="bi bi-x"></i></a>
+    </div>
+  </form>
+</div>
+{% if start_date or end_date %}
+<div class="mb-3">
+  <span class="badge bg-light text-dark border">
+    <i class="bi bi-funnel me-1"></i>Active Filters: Date {{ start_date or 'Any' }} to {{ end_date or 'Any' }}
+  </span>
+</div>
+{% endif %}
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="kcard"><div class="icon-box" style="background:#fee2e2;color:#991b1b;"><i class="bi bi-cash-coin"></i></div>
+      <div class="kval">₹{{ "{:,.0f}".format(total_amt) }}</div><div class="klbl">Total Expenses ({{ selected_fy }})</div></div>
+  </div>
+  {% for row in cat_totals[:3] %}
+  <div class="col-md-{% if cat_totals|length == 1 %}8{% else %}2{% endif %}">
+    <div class="kcard" style="padding:14px;">
+      <div style="font-size:11px;color:#64748b;font-weight:600;">{{ row.category }}</div>
+      <div style="font-size:18px;font-weight:700;color:var(--navy);margin-top:4px;">₹{{ "{:,.0f}".format(row.total) }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<div class="tcard">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>Voucher No</th><th>Date</th><th>Category</th><th>Description</th><th>Payee</th><th>Amount</th><th>Mode</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for e in expenses.items %}
+        <tr>
+          <td><code style="font-size:12px;">{{ e.voucher_number }}</code></td>
+          <td>{{ e.expense_date.strftime('%d %b %Y') }}</td>
+          <td><span class="badge bg-light text-dark border" style="font-size:11px;">{{ e.category }}</span></td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ e.description }}">{{ e.description }}</td>
+          <td style="color:#64748b;">{{ e.payee or '—' }}</td>
+          <td class="fw-bold">₹{{ "{:,.2f}".format(e.amount) }}</td>
+          <td><span class="badge bg-light text-dark border" style="font-size:11px;">{{ e.payment_mode.value }}</span></td>
+          <td>
+            {% if current_user.is_admin %}
+            <form method="POST" action="{{ url_for('admin.delete_expense', eid=e.id) }}" onsubmit="return confirm('Delete voucher {{ e.voucher_number }}?')" style="display:inline;">
+              <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"><i class="bi bi-trash"></i></button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No expenses found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if expenses.pages > 1 %}
+  <div class="p-3 border-top"><nav><ul class="pagination pagination-sm mb-0 justify-content-center">
+    {% if expenses.has_prev %}<li class="page-item"><a class="page-link" href="?page={{ expenses.prev_num }}&fy={{ selected_fy }}&category={{ selected_category }}&search={{ search }}&start_date={{ start_date }}&end_date={{ end_date }}">‹</a></li>{% endif %}
+    {% for p in expenses.iter_pages() %}{% if p %}<li class="page-item {% if p==expenses.page %}active{% endif %}"><a class="page-link" href="?page={{ p }}&fy={{ selected_fy }}&category={{ selected_category }}&search={{ search }}&start_date={{ start_date }}&end_date={{ end_date }}">{{ p }}</a></li>{% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}{% endfor %}
+    {% if expenses.has_next %}<li class="page-item"><a class="page-link" href="?page={{ expenses.next_num }}&fy={{ selected_fy }}&category={{ selected_category }}&search={{ search }}&start_date={{ start_date }}&end_date={{ end_date }}">›</a></li>{% endif %}
+  </ul></nav></div>
+  {% endif %}
+</div>
+{% endblock %}

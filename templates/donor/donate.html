@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Give Online{% endblock %}
+{% block page_title %}Give Online{% endblock %}
+{% block content %}
+<div class="ph"><h4>💝 Give Online</h4><p>Make a secure donation to All Saints' Cathedral, Nagpur.</p></div>
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="fcard">
+      <div style="background:linear-gradient(135deg,#1a2e5a,#2563eb);color:#fff;border-radius:10px;padding:20px;margin-bottom:24px;text-align:center;">
+        <div style="font-size:32px;margin-bottom:8px;">🙏</div>
+        <h5 class="mb-1">Your generosity makes a difference</h5>
+        <p style="font-size:13px;opacity:.85;margin:0;">"Each of you should give what you have decided in your heart to give." — 2 Cor 9:7</p>
+      </div>
+      <form method="POST" action="{{ url_for('payment.initiate') }}" id="donateForm">
+        <h6 class="fw-bold mb-3" style="color:var(--navy);"><i class="bi bi-list-columns me-2"></i>Select Donation Heads</h6>
+        <div class="table-responsive">
+          <table class="table table-bordered" id="headsTable">
+            <thead style="background:#1a2e5a;color:#fff;"><tr><th style="width:36px;text-align:center;">S.N.</th><th>Particulars</th><th style="width:140px;">Amount (₹)</th></tr></thead>
+            <tbody>
+              {% for i, head in heads | enumerate(start=1) %}
+              <tr>
+                <td style="text-align:center;color:#64748b;font-size:13px;">{{ i }}</td>
+                <td style="font-weight:500;font-size:13.5px;">{{ head.value }}</td>
+                <td><input type="number" name="head_{{ head.name }}" class="form-control form-control-sm head-amt" min="0" step="1" placeholder="0" oninput="calcTotal()" style="text-align:right;"/></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot><tr style="background:#f8fafc;font-weight:700;"><td colspan="2" style="text-align:right;font-size:14px;">TOTAL</td><td style="text-align:right;font-size:16px;color:var(--navy);" id="totalDisplay">₹ 0</td></tr></tfoot>
+          </table>
+        </div>
+        <div class="alert alert-info py-2 mb-3" style="font-size:12px;border-radius:8px;">
+          <i class="bi bi-shield-check me-2"></i>Payment secured by <strong>Razorpay</strong>. Supports UPI, Cards, Net Banking & Wallets.
+        </div>
+        <button type="submit" id="payBtn" class="btn btn-gold w-100" style="padding:14px;font-size:16px;font-weight:700;" disabled>
+          <i class="bi bi-credit-card me-2"></i>Proceed to Payment
+        </button>
+        <p style="text-align:center;font-size:12px;color:#64748b;margin-top:12px;">You will receive an instant digital receipt after payment.</p>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function calcTotal(){
+  let total=0;
+  document.querySelectorAll('.head-amt').forEach(i=>{total+=parseFloat(i.value)||0;i.closest('tr').style.background=parseFloat(i.value)>0?'#f0fff4':'';});
+  document.getElementById('totalDisplay').textContent='₹ '+total.toLocaleString('en-IN');
+  document.getElementById('payBtn').disabled=total<=0;
+  document.getElementById('payBtn').textContent=total>0?'💳 Pay ₹'+total.toLocaleString('en-IN')+' Securely':'Proceed to Payment';
+}
+</script>
+{% endblock %}
