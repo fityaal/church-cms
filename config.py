@@ -30,41 +30,23 @@ def _build_db_uri():
 
 
 def _build_connect_args():
-    args = {
-        "connect_timeout": 10,
-        "read_timeout": 30,
-        "write_timeout": 30,
-    }
-
+    args = {"connect_timeout": 10, "read_timeout": 30, "write_timeout": 30}
     if _env_bool("MYSQL_SSL", False):
-        # MYSQL_SSL_CA_PEM is treated as a FILE PATH.
-        # This works on both Windows and Linux/Render.
-        ca_path = os.environ.get("MYSQL_SSL_CA_PEM", "").strip()
-
-        if not ca_path:
-            ca_path = os.environ.get("MYSQL_SSL_CA", "").strip()
-
+        ca_pem = os.environ.get("MYSQL_SSL_CA_PEM", "").strip()
+        ca_path = os.environ.get("MYSQL_SSL_CA", "").strip()
+        if ca_pem and not ca_path:
+            ca_path = os.path.join("/tmp", "mysql-ca.pem")
+            with open(ca_path, "w", encoding="utf-8") as fh:
+                fh.write(ca_pem)
         if ca_path:
-            ca_path = os.path.abspath(os.path.expanduser(ca_path))
-
-            if not os.path.isfile(ca_path):
-                raise FileNotFoundError(
-                    f"MySQL CA certificate not found: {ca_path}"
-                )
-
             args.update({
                 "ssl_ca": ca_path,
-                "ssl_verify_cert": _env_bool(
-                    "MYSQL_SSL_VERIFY", True
-                ),
-                "ssl_verify_identity": _env_bool(
-                    "MYSQL_SSL_VERIFY_IDENTITY", False
-                ),
+                "ssl_verify_cert": _env_bool("MYSQL_SSL_VERIFY", True),
+                "ssl_verify_identity": _env_bool("MYSQL_SSL_VERIFY_IDENTITY", False),
             })
         else:
-            # Encrypted connection without explicit CA verification.
+            # Require encrypted transport without requiring a CA file.
             args["ssl"] = {}
-
     return args
 
 
@@ -129,7 +111,7 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
-    SESSION_COOKIE_SECURE = _env_bool("SESSION_COOKIE_SECURE", False)
+    SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_HTTPONLY = True
