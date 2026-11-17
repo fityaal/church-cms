@@ -1,3 +1,4 @@
+
 import os
 from datetime import timedelta
 from urllib.parse import quote_plus
@@ -12,17 +13,35 @@ def _env_bool(name, default=False):
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+
 def _build_db_uri():
-    # Optional complete SQLAlchemy URI takes precedence.
+    # Complete database URL takes precedence over individual MySQL settings.
     database_url = os.environ.get("DATABASE_URL", "").strip()
+
     if database_url:
-        return database_url.replace("mysql://", "mysql+pymysql://", 1)
+        if database_url.startswith("postgres://"):
+            return database_url.replace(
+                "postgres://", "postgresql+psycopg2://", 1
+            )
+
+        if database_url.startswith("postgresql://"):
+            return database_url.replace(
+                "postgresql://", "postgresql+psycopg2://", 1
+            )
+
+        if database_url.startswith("mysql://"):
+            return database_url.replace(
+                "mysql://", "mysql+pymysql://", 1
+            )
+
+        return database_url
 
     host = os.environ.get("MYSQL_HOST", "127.0.0.1")
     port = os.environ.get("MYSQL_PORT", "3306")
     user = os.environ.get("MYSQL_USER", "root")
     password = os.environ.get("MYSQL_PASSWORD", "")
     database = os.environ.get("MYSQL_DB", "church_cms")
+
     return (
         f"mysql+pymysql://{quote_plus(user)}:{quote_plus(password)}@"
         f"{host}:{port}/{quote_plus(database)}?charset=utf8mb4"
@@ -30,24 +49,42 @@ def _build_db_uri():
 
 
 def _build_connect_args():
-    args = {"connect_timeout": 10, "read_timeout": 30, "write_timeout": 30}
+    database_url = os.environ.get("DATABASE_URL", "").strip().lower()
+
+    # PostgreSQL connection settings
+    if database_url.startswith(("postgres://", "postgresql://",
+                                 "postgresql+psycopg2://")):
+        return {"connect_timeout": 10}
+
+    # MySQL connection settings
+    args = {
+        "connect_timeout": 10,
+        "read_timeout": 30,
+        "write_timeout": 30
+    }
+
     if _env_bool("MYSQL_SSL", False):
         ca_pem = os.environ.get("MYSQL_SSL_CA_PEM", "").strip()
         ca_path = os.environ.get("MYSQL_SSL_CA", "").strip()
+
         if ca_pem and not ca_path:
             ca_path = os.path.join("/tmp", "mysql-ca.pem")
             with open(ca_path, "w", encoding="utf-8") as fh:
                 fh.write(ca_pem)
+
         if ca_path:
             args.update({
                 "ssl_ca": ca_path,
                 "ssl_verify_cert": _env_bool("MYSQL_SSL_VERIFY", True),
-                "ssl_verify_identity": _env_bool("MYSQL_SSL_VERIFY_IDENTITY", False),
+                "ssl_verify_identity": _env_bool(
+                    "MYSQL_SSL_VERIFY_IDENTITY", False
+                ),
             })
         else:
-            # Require encrypted transport without requiring a CA file.
             args["ssl"] = {}
+
     return args
+
 
 
 class Config:
@@ -77,11 +114,15 @@ class Config:
     MAIL_USE_TLS = True
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
-    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_USERNAME", "noreply@allsaintsnagpur.org")
+    MAIL_DEFAULT_SENDER = os.environ.get(
+        "MAIL_USERNAME", "noreply@allsaintsnagpur.org"
+    )
 
     CHURCH_NAME = "All Saints' Cathedral, Nagpur"
     CHURCH_DIOCESE = "Diocese of Nagpur (C.N.I.)"
-    CHURCH_ADDRESS = "All Saints' Cathedral, Nagpur - 440001, Maharashtra"
+    CHURCH_ADDRESS = (
+        "All Saints' Cathedral, Nagpur - 440001, Maharashtra"
+    )
     CHURCH_PHONE = "+91-712-2520000"
     CHURCH_EMAIL = "office@allsaintsnagpur.org"
     CHURCH_PAN = os.environ.get("CHURCH_PAN", "")
@@ -92,10 +133,11 @@ class Config:
     ITEMS_PER_PAGE = 20
     OTP_EXPIRY_MINUTES = 10
     DEFAULT_PASSWORD = os.environ.get("DEFAULT_PASSWORD", "")
-    UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER") or os.path.join(BASE_DIR, "static", "uploads")
+    UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER") or os.path.join(
+        BASE_DIR, "static", "uploads"
+    )
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024
 
-    # Production bootstrap is intentionally off. Use create_admin.py once.
     SEED_DEFAULTS = _env_bool("SEED_DEFAULTS", False)
 
 
